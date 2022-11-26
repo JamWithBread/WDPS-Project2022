@@ -1,6 +1,9 @@
 from bs4 import BeautifulSoup
 import re
 
+# before using in container:
+#	python3 -m pip install bs4
+
 KEYHTML= "<!DOCTYPE html"
 
 def warc_html_killer(content):
@@ -30,7 +33,7 @@ def warc_html_killer(content):
 	text = '\n'.join(chunk for chunk in chunks if chunk)
 
 	#Remove any html characters that html.parser missed
-	text = re.sub("[^\u4e00-\u9fa5^\s\.\!\:\-\@\#\$\(\)\_\,\;\?^a-z^A-Z^0-9]"," ",text)
+	text = re.sub("[^\u4e00-\u9fa5^\s\.\!\:\-\@\#\$\(\)\_\,\;\?^a-z^A-Z^0-9]","",text)
 
 	return text
 

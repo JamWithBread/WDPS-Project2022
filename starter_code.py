@@ -3,6 +3,7 @@ import gzip
 sys.path.append("/app/assignment/assignment-code/src")
 
 from html_to_text_prod import warc_html_killer
+from spacy_prod import spacy_extract_entities
 
 KEYNAME = "WARC-TREC-ID"
 
