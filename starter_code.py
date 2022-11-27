@@ -29,9 +29,11 @@ def find_entities(payload,i):
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
-    entities = pacy_extract_entities(text)
-    for key in entities.keys():
-        print(f"Entity: {key},\n    Idxs and label: {entities[key]}")
+
+    entities = spacy_extract_entities(text)
+    if i < 4:
+        for key in entities.keys():
+            print(f"Entity: {key},\n    Idxs and label: {entities[key]}")
     # Problem 3: We now have to disambiguate the entities in the text. For
     # instance, let's assume that we identified the entity "Michael Jordan".
     # Which entity in Wikidata is the one that is referred to in the text?
@@ -52,7 +54,6 @@ def find_entities(payload,i):
     # discovered disambiguated entities with the same format so that I can
     # check the performance of your program.
 
-    #DEBUGGING
     cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
     for label, wikipedia_id in cheats.items():
         if key and (label in payload):
@@ -102,16 +103,15 @@ if __name__ == '__main__':
         sys.exit(0)
 
     with gzip.open(INPUT, 'rt', errors='ignore') as fo:
-        i = 0
+        i = 0 #For debugging / tracking what document # we're at in the warc file
         for record in split_records(fo):
-            if i < 3:
-                print(f"i: {i}\n")
-                entities = find_entities(record,i)
-                i+=1
-            #DEBUGGING
-                for key, label, wikipedia_id in entities:
-                    print("ENTITY: " + key + '\t' + label + '\t' + wikipedia_id)
-                relations = find_relations(record, entities)
-                for key, s, o, label, wikidata_id in relations:
-                    print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+            print(f"i: {i}\n")
+            i+=1
+            entities = find_entities(record,i)
+            
+            for key, label, wikipedia_id in entities:
+                print("ENTITY: " + key + '\t' + label + '\t' + wikipedia_id)
+            relations = find_relations(record, entities)
+            for key, s, o, label, wikidata_id in relations:
+                print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
 
