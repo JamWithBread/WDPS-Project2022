@@ -11,13 +11,15 @@ import spacy
 #	{"Robin Cannon": [5154, 5166, 'PERSON']}
 
 def spacy_extract_entities(text):
-	nlp = spacy.load("en_core_web_sm")
-	doc = nlp(text)
-	entities = {}
+	nlp_model = spacy.load("en_core_web_sm")
 
-	for ent in doc1.ents:
+	doc = nlp_model(text)
+	entities = []
+
+	for ent in doc.ents:
 		if ent.label_ not in ["CARDINAL", "DATE", "QUANTITY", "TIME", "ORDINAL", "MONEY", "PERCENT", "QUANTITY"]:
-			entities[ent.text.replace('\t', ' ')] = [ent.start_char, ent.end_char, ent.label_]
+			entity = {"name": ent.text.replace('\t', ' '), 'label':ent.label_, 'start':ent.start_char, 'end':ent.end_char}
+			entities.append(entity)
 			
 	return entities
 

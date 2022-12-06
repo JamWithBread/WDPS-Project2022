@@ -1,9 +1,12 @@
+# python3 starter_code.py data/warcs/sample.warc.gz
 import sys
 import gzip
 sys.path.append("/app/assignment/assignment-code/src")
 
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
+from wikimapper import WikiMapper
+from link_entities import get_entity_candidates
 
 KEYNAME = "WARC-TREC-ID"
 
@@ -30,18 +33,52 @@ def find_entities(payload,i):
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
 
-    entities = spacy_extract_entities(text)
-    if i < 4:
-        for key in entities.keys():
-            print(f"Entity: {key},\n    Idxs and label: {entities[key]}")
+    ents = spacy_extract_entities(text)
+
     # Problem 3: We now have to disambiguate the entities in the text. For
     # instance, let's assume that we identified the entity "Michael Jordan".
     # Which entity in Wikidata is the one that is referred to in the text?
 
+    # For each entity, get candidate entities from wikidata, rank and select top match
+    #print(ents)
+    entities_and_candidates = {} #{i:{'name':None, "ent_info":None, 'candidates':[]}}
+    i = 0
+    for entity in ents:
+        entities_and_candidates[i] = {'name': entity['name'], 
+                                    'ent_info': [entity['label'], entity['start'], entity['end']], 
+                                    'candidates':None}
+        candidates = get_entity_candidates(entity)
+        if candidates == []:
+            print(f"\n\n entity: {entity} - NO CANDIDATE MATCHES \n\n")
+        entities_and_candidates[i]['candidates'] = candidates
+        i+=1
+
+    for key in entities_and_candidates.keys():
+        print(f"entity # {key}\n")
+        print(entities_and_candidates[key],"\n\n")
+
+
+    #Only keep entities that could be found in wikimedia, get wikipedia links for these entities
+
+    # mapper = WikiMapper("index_enwiki-latest.db")
+    # for key in entities.keys():
+    #     if entities[key][3] == None:
+    #         del entities[key]
+    #     else: # Map wikidata id to wikipedia page title. Append wikipedia link to dictionary
+    #         qid = entities[key][2]
+    #         title = mapper.id_to_titles(qid)[0]
+    #         wikipedia_link = "https://en.wikipedia.org/wiki/" + title
+    #         entities[key].append(wikipedia_link)
+
+    # if i < 5:
+    #     for key in entities.keys():
+    #         print(f"Entitiy: {entitites[key]},\nwikipedia link: {entities[key][-1]}")
+
+
     # A simple implementation would be to create a dictionary with all the
     # labels of the entities in Wikipedia. You may want to contact also some
     # external KBs (like Wikidata) to get some extra knowledge, or find a way
-    # to leverage the context in the webpage For instance, if you know that the
+    # to leverage the context in the webpage. For instance, if you know that the
     # webpage refers to persons then you can query the knowledge base to filter
     # out all the entities that are not persons...
 
