@@ -3,6 +3,8 @@ import sys
 import gzip
 import re
 sys.path.append("src")
+import json
+import urllib.request
 
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
@@ -39,6 +41,8 @@ def find_entities(payload,i):
 
     ents = spacy_extract_entities(text)
 
+        for key in entities.keys():
+            print(f"Entity: {key},\n    Idxs and label: {entities[key]}")
     # Problem 3: We now have to disambiguate the entities in the text. For
     # instance, let's assume that we identified the entity "Michael Jordan".
     # Which entity in Wikidata is the one that is referred to in the text?
@@ -94,6 +98,12 @@ def find_entities(payload,i):
     # text to identify the entities. Your implementation should return the
     # discovered disambiguated entities with the same format so that I can
     # check the performance of your program.
+
+    # To get the url from the wikidata code.
+    # id = wikipedia_id
+    # with urllib.request.urlopen("https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids="+id+"&inprop=url&format=json") as url:
+    #         data = json.load(url)
+    #         url = data["query"]["pages"][id]["fullurl"]
 
     #cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
     # for label, wikipedia_id in entities.items():
