@@ -1,7 +1,8 @@
 # python3 starter_code.py data/warcs/sample.warc.gz
 import sys
 import gzip
-sys.path.append("/app/assignment/assignment-code/src")
+import re
+sys.path.append("src")
 
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
@@ -13,7 +14,7 @@ KEYNAME = "WARC-TREC-ID"
 # The goal of this function process the webpage and returns a list of labels -> entity ID
 def find_entities(payload,i):
     if payload == '':
-        return
+        return 
 
     # The variable payload contains the source code of a webpage and some
     # additional meta-data.  We first retrieve the ID of the webpage, which is
@@ -25,11 +26,14 @@ def find_entities(payload,i):
         if line.startswith(KEYNAME):
             key = line.split(': ')[1]
             break
-
+    
     # Problem 1: The webpage is typically encoded in HTML format.
     # We should get rid of the HTML tags and retrieve the text. How can we do it?
+    print(payload)
+    result = re.search('WARC-TREC-ID:(.*)WARC-IP-Address:', payload)
+    id = result.group(1)
     text = warc_html_killer(payload)
-    
+    print(text)
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
 
@@ -91,10 +95,11 @@ def find_entities(payload,i):
     # discovered disambiguated entities with the same format so that I can
     # check the performance of your program.
 
-    cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
-    for label, wikipedia_id in cheats.items():
-        if key and (label in payload):
-            yield key, label, wikipedia_id
+    #cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
+    # for label, wikipedia_id in entities.items():
+    #     if key and (label in payload):
+    #         yield key, label, wikipedia_id
+    return entities
 
 
 # The goal of this function is to find relations between the entities
@@ -146,9 +151,12 @@ if __name__ == '__main__':
             i+=1
             entities = find_entities(record,i)
             
-            for key, label, wikipedia_id in entities:
+            for key, label, id, wikipedia_id in entities:
                 print("ENTITY: " + key + '\t' + label + '\t' + wikipedia_id)
-            relations = find_relations(record, entities)
-            for key, s, o, label, wikidata_id in relations:
-                print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+            
+            if i == 3:
+                break
+            # relations = find_relations(record, entities)
+            # for key, s, o, label, wikidata_id in relations:
+            #     print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
 
