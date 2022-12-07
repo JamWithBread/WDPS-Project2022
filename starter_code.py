@@ -29,6 +29,7 @@ def find_entities(payload,i):
     # Problem 1: The webpage is typically encoded in HTML format.
     # We should get rid of the HTML tags and retrieve the text. How can we do it?
     text = warc_html_killer(payload)
+    print(f"document # {i}: \n {text}\n\n\n")
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
@@ -39,40 +40,28 @@ def find_entities(payload,i):
     # instance, let's assume that we identified the entity "Michael Jordan".
     # Which entity in Wikidata is the one that is referred to in the text?
 
-    # For each entity, get candidate entities from wikidata, rank and select top match
-    #print(ents)
+    # Problem 3.1: For each entity, get candidate entities from wikidata, rank and select top match
+
+    #TODO: turn into a function and call it from link_entities.py
+    #      Use better data structure / less dict searching to make faster
     entities_and_candidates = {} #{i:{'name':None, "ent_info":None, 'candidates':[]}}
-    i = 0
+    j = 0
     for entity in ents:
-        entities_and_candidates[i] = {'name': entity['name'], 
-                                    'ent_info': [entity['label'], entity['start'], entity['end']], 
-                                    'candidates':None}
-        candidates = get_entity_candidates(entity)
+        candidates = get_entity_candidates(entity) # Get candidates for current entity
         if candidates == []:
-            print(f"\n\n entity: {entity} - NO CANDIDATE MATCHES \n\n")
-        entities_and_candidates[i]['candidates'] = candidates
-        i+=1
+            continue #if no candidate matches found in wikidata, discard this entity
+        entities_and_candidates[j] = {'name': entity['name'], 
+                                    'ent_info': [entity['label'], entity['start'], entity['end']], 
+                                    'candidates':candidates}
+        j+=1
 
-    for key in entities_and_candidates.keys():
-        print(f"entity # {key}\n")
-        print(entities_and_candidates[key],"\n\n")
+    for entry in entities_and_candidates.keys():
+        print(f"entity # {entry}\n")
+        print(entities_and_candidates[entry],"\n\n")
 
+    #Problem 3.2: Rank and select top candidate for each entity
 
-    #Only keep entities that could be found in wikimedia, get wikipedia links for these entities
-
-    # mapper = WikiMapper("index_enwiki-latest.db")
-    # for key in entities.keys():
-    #     if entities[key][3] == None:
-    #         del entities[key]
-    #     else: # Map wikidata id to wikipedia page title. Append wikipedia link to dictionary
-    #         qid = entities[key][2]
-    #         title = mapper.id_to_titles(qid)[0]
-    #         wikipedia_link = "https://en.wikipedia.org/wiki/" + title
-    #         entities[key].append(wikipedia_link)
-
-    # if i < 5:
-    #     for key in entities.keys():
-    #         print(f"Entitiy: {entitites[key]},\nwikipedia link: {entities[key][-1]}")
+    #problem 3.3: Get wikipedia link for selected candidate
 
 
     # A simple implementation would be to create a dictionary with all the
@@ -84,6 +73,12 @@ def find_entities(payload,i):
 
     # Obviously, more sophisticated implementations that the one suggested
     # above are more than welcome :-)
+
+    # To get the url from the wikidata code.
+    # id = wikipedia_id
+    # with urllib.request.urlopen("https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids="+id+"&inprop=url&format=json") as url:
+    #         data = json.load(url)
+    #         url = data["query"]["pages"][id]["fullurl"]
 
     # For now, we are cheating. We are going to return the labels that we stored
     # in sample-labels-cheat.txt Instead of doing that, you should process the
@@ -142,7 +137,10 @@ if __name__ == '__main__':
     with gzip.open(INPUT, 'rt', errors='ignore') as fo:
         i = 0 #For debugging / tracking what document # we're at in the warc file
         for record in split_records(fo):
-            print(f"i: {i}\n")
+            #DEBUGGING
+            if i == 40:
+                break
+            #print(f"i: {i}\n")
             i+=1
             entities = find_entities(record,i)
             
