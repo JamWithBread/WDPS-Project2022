@@ -1,4 +1,9 @@
 # python3 starter_code.py data/warcs/sample.warc.gz
+
+## TODO: add unlinkable entity cutoff score --> returns 'NIL'
+# TODO: There are some pages that are nearly identical to another, after processing one skip the rest ????
+        #ie WARC-Target-URI: http://cheapcosthealthinsurance.com/2012/02/06/what-is-breast-the-cancer/
+
 import sys
 import gzip
 sys.path.append("/app/assignment/assignment-code/src")
@@ -6,12 +11,14 @@ sys.path.append("/app/assignment/assignment-code/src")
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
 from wikimapper import WikiMapper
-from link_entities import get_entity_candidates
+from link_entities import get_entity_candidates, add_wikipedia_links
+from rank_candidates import get_top_candidates
 
 KEYNAME = "WARC-TREC-ID"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
 def find_entities(payload,i):
+    print(f"doc {i}/1466")
     if payload == '':
         return
 
@@ -29,7 +36,7 @@ def find_entities(payload,i):
     # Problem 1: The webpage is typically encoded in HTML format.
     # We should get rid of the HTML tags and retrieve the text. How can we do it?
     text = warc_html_killer(payload)
-    print(f"document # {i}: \n {text}\n\n\n")
+    #print(f"document # {i}: \n {text}\n\n\n")
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
@@ -44,6 +51,7 @@ def find_entities(payload,i):
 
     #TODO: turn into a function and call it from link_entities.py
     #      Use better data structure / less dict searching to make faster
+
     entities_and_candidates = {} #{i:{'name':None, "ent_info":None, 'candidates':[]}}
     j = 0
     for entity in ents:
@@ -55,14 +63,15 @@ def find_entities(payload,i):
                                     'candidates':candidates}
         j+=1
 
-    for entry in entities_and_candidates.keys():
-        print(f"entity # {entry}\n")
-        print(entities_and_candidates[entry],"\n\n")
+    # for entry in entities_and_candidates.keys():
+    #     print(f"entity # {entry}\n")
+    #     print(entities_and_candidates[entry],"\n\n")
 
     #Problem 3.2: Rank and select top candidate for each entity
+    matched_entities = get_top_candidates(entities_and_candidates)
 
     #problem 3.3: Get wikipedia link for selected candidate
-
+    matched_entities = add_wikipedia_links(matched_entities)
 
     # A simple implementation would be to create a dictionary with all the
     # labels of the entities in Wikipedia. You may want to contact also some
@@ -73,12 +82,6 @@ def find_entities(payload,i):
 
     # Obviously, more sophisticated implementations that the one suggested
     # above are more than welcome :-)
-
-    # To get the url from the wikidata code.
-    # id = wikipedia_id
-    # with urllib.request.urlopen("https://en.wikipedia.org/w/api.php?action=query&prop=info&pageids="+id+"&inprop=url&format=json") as url:
-    #         data = json.load(url)
-    #         url = data["query"]["pages"][id]["fullurl"]
 
     # For now, we are cheating. We are going to return the labels that we stored
     # in sample-labels-cheat.txt Instead of doing that, you should process the
@@ -138,8 +141,8 @@ if __name__ == '__main__':
         i = 0 #For debugging / tracking what document # we're at in the warc file
         for record in split_records(fo):
             #DEBUGGING
-            if i == 40:
-                break
+            # if i == 40:
+            #     break
             #print(f"i: {i}\n")
             i+=1
             entities = find_entities(record,i)

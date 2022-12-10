@@ -34,7 +34,7 @@ def warc_html_killer(content):
 
 	#Remove any html characters that html.parser missed
 	text = re.sub("[^\u4e00-\u9fa5^\s\.\!\:\-\@\#\$\(\)\_\,\;\?^a-z^A-Z^0-9]"," ",text)
-	text = re.sub("\n"," ",text)
+	text = re.sub("\n",". ",text)
 
 	return text
 

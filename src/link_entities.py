@@ -1,11 +1,17 @@
 from elasticsearch import Elasticsearch
+from wikimapper import WikiMapper
+import urllib
+import json
+
 
 ELASTIC_PASSWORD = "YqPxlMdOLUdyOBd7vAiYt0T4"
 CLOUD_ID = "WDPS2022_Group34:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQ4OWJhNGUzYjA4ZDQ0Y2YwYmQyZmQ1YjZiNDdiMjdlNSQxOTYzZTJiNmNmZTY0NjBlYTFlOWVmYTkzNDRmYjYyMQ=="
 client = Elasticsearch(cloud_id = CLOUD_ID, basic_auth = ("elastic", ELASTIC_PASSWORD))
 print(client.info())
+
 def get_entity_candidates(entity):
-	# entity input should be a dict with 4 keys (name, label, start, end)
+	# entity input should be a dict with at minumum the keys "name" and "label"
+	# name will be used to query wikidata dump -> returns candidate matches
 	
 	try:
 		response = client.search(
@@ -17,10 +23,6 @@ def get_entity_candidates(entity):
 		candidates = []
 
 		for hit in response['hits']['hits']:
-			#DEBUGGING
-			#print(f"\n\n hit: \n{hit}\n")
-			#break
-
 			candidate = {"id":hit["_id"], "name": hit['_source']['column2'] , "wikidata_link": hit['_source']['column3']}
 			candidates.append(candidate)
 
@@ -30,6 +32,37 @@ def get_entity_candidates(entity):
 		print(f"Error in elastic search run:\n {e}")
 		return []
 
+def get_wikipedia_link(wikidata_id):
+	_id = wikidata_id
+	url = None
+	with urllib.request.urlopen("https://www.wikidata.org/w/api.php?action=wbgetentities&format=json&props=sitelinks&ids="+_id+"&sitefilter=enwiki") as url:
+		try:
+			data = json.load(url)
+			#print(f"json data: {data}\n")
+			title = data["entities"][_id]["sitelinks"]["enwiki"]["title"]
+			wiki_url = "https://en.wikipedia.org/wiki/{}".format(title)
+
+		except Exception as e:
+			print(f"Failed to load json data for QID: {_id}, reason: \n {e}")
+			return None
+
+	return wiki_url
+
+
+def add_wikipedia_links(entities_and_matches):
+	for key in entities_and_matches.keys():
+		try:
+			wikidata_url = entities_and_matches[key]['match']['wikidata_link']
+			wikidata_id =  wikidata_url.rsplit('/', 1)[1].strip(">")
+			wikipedia_url = get_wikipedia_link(wikidata_id)
+			if not wikipedia_url: #if url not found for entity, discard it
+				continue
+			entities_and_matches[key]['match']['wikipedia_link'] = wikipedia_url
+			#print(f"Entity: {entities_and_matches[key]['name']}, Acquired wikipedia_link: {wikipedia_url}\n")
+		except Exception as e:
+			print(f"Error in add_wikipedia_links. reason: {e}\n")
+
+
 # Hit Example:
 """{'_index': 'wikidata_1', 
 	'_id': '3HG254QBt1nlyh_STzi8', 
@@ -38,11 +71,3 @@ def get_entity_candidates(entity):
 				'column3': '<http://www.wikidata.org/entity/Q90>', 
 				'column2': 'Paris, France'}} """
 
-
-
-
-
-
-
-
-#def rank_candidates()
