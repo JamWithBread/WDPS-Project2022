@@ -3,6 +3,7 @@
 ## TODO: add unlinkable entity cutoff score --> returns 'NIL'
 # TODO: There are some pages that are nearly identical to another, after processing one skip the rest ????
         #ie WARC-Target-URI: http://cheapcosthealthinsurance.com/2012/02/06/what-is-breast-the-cancer/
+# TODO: Program is fairly slow, main bottleneck is elasticsearch candidate generation (queries)
 
 import sys
 import gzip
@@ -11,14 +12,16 @@ sys.path.append("/app/assignment/assignment-code/src")
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
 from wikimapper import WikiMapper
-from link_entities import get_entity_candidates, add_wikipedia_links
+from link_entities import get_all_candidates, add_wikipedia_links
 from rank_candidates import get_top_candidates
+import time
 
 KEYNAME = "WARC-TREC-ID"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
 def find_entities(payload,i):
-    print(f"doc {i}/1466")
+    t00 = time.time()
+    print(f"\n\nFinding entities for doc {i}/1466")
     if payload == '':
         return
 
@@ -35,12 +38,12 @@ def find_entities(payload,i):
 
     # Problem 1: The webpage is typically encoded in HTML format.
     # We should get rid of the HTML tags and retrieve the text. How can we do it?
+    
     text = warc_html_killer(payload)
     #print(f"document # {i}: \n {text}\n\n\n")
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
-
     ents = spacy_extract_entities(text)
 
     # Problem 3: We now have to disambiguate the entities in the text. For
@@ -48,20 +51,7 @@ def find_entities(payload,i):
     # Which entity in Wikidata is the one that is referred to in the text?
 
     # Problem 3.1: For each entity, get candidate entities from wikidata, rank and select top match
-
-    #TODO: turn into a function and call it from link_entities.py
-    #      Use better data structure / less dict searching to make faster
-
-    entities_and_candidates = {} #{i:{'name':None, "ent_info":None, 'candidates':[]}}
-    j = 0
-    for entity in ents:
-        candidates = get_entity_candidates(entity) # Get candidates for current entity
-        if candidates == []:
-            continue #if no candidate matches found in wikidata, discard this entity
-        entities_and_candidates[j] = {'name': entity['name'], 
-                                    'ent_info': [entity['label'], entity['start'], entity['end']], 
-                                    'candidates':candidates}
-        j+=1
+    entities_and_candidates = get_all_candidates(ents)
 
     # for entry in entities_and_candidates.keys():
     #     print(f"entity # {entry}\n")
@@ -71,7 +61,9 @@ def find_entities(payload,i):
     matched_entities = get_top_candidates(entities_and_candidates)
 
     #problem 3.3: Get wikipedia link for selected candidate
+    t0 = time.time()
     matched_entities = add_wikipedia_links(matched_entities)
+    print(f"Find entities finished - Total time: {round(time.time()-t00,2)}s\n")
 
     # A simple implementation would be to create a dictionary with all the
     # labels of the entities in Wikipedia. You may want to contact also some
@@ -88,11 +80,22 @@ def find_entities(payload,i):
     # text to identify the entities. Your implementation should return the
     # discovered disambiguated entities with the same format so that I can
     # check the performance of your program.
+    if not matched_entities:
+        return
 
-    cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
-    for label, wikipedia_id in cheats.items():
-        if key and (label in payload):
-            yield key, label, wikipedia_id
+    for item in matched_entities.keys():
+        entry = matched_entities[item]
+        label = entry['name']
+        wikipedia_id = entry['match']['wikipedia_link']
+        yield key, label, wikipedia_id
+
+
+    # cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
+    # for label, wikipedia_id in cheats.items():
+    #     if key and (label in payload):
+    #         print(f"ley: {key}, label: {label}, wikipedia_id: {wikipedia_id}\n")
+    #         yield key, label, wikipedia_id
+
 
 
 # The goal of this function is to find relations between the entities

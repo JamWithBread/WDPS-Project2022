@@ -32,6 +32,22 @@ def get_entity_candidates(entity):
 		print(f"Error in elastic search run:\n {e}")
 		return []
 
+
+def get_all_candidates(entities):
+    entities_and_candidates = {} 
+    j = 0
+    for entity in entities:
+        candidates = get_entity_candidates(entity) # Get candidates for current entity
+        if candidates == []:
+            continue #if no candidate matches found in wikidata, discard this entity
+        entities_and_candidates[j] = {'name': entity['name'], 
+                                    'ent_info': [entity['label'], entity['start'], entity['end']], 
+                                    'candidates':candidates}
+        j+=1
+
+    return entities_and_candidates
+
+
 def get_wikipedia_link(wikidata_id):
 	_id = wikidata_id
 	url = None
@@ -50,17 +66,30 @@ def get_wikipedia_link(wikidata_id):
 
 
 def add_wikipedia_links(entities_and_matches):
+	seen_links = []
+	remove_entries = [] #remove entities that fail to acquire wikilink
 	for key in entities_and_matches.keys():
 		try:
 			wikidata_url = entities_and_matches[key]['match']['wikidata_link']
 			wikidata_id =  wikidata_url.rsplit('/', 1)[1].strip(">")
 			wikipedia_url = get_wikipedia_link(wikidata_id)
 			if not wikipedia_url: #if url not found for entity, discard it
+				remove_entries.append(key)
 				continue
-			entities_and_matches[key]['match']['wikipedia_link'] = wikipedia_url
+			if wikipedia_url not in seen_links: #Prevent storing duplicate entities
+				entities_and_matches[key]['match']['wikipedia_link'] = wikipedia_url
+				seen_links.append(wikipedia_url)
+			else:
+				remove_entries.append(key)
 			#print(f"Entity: {entities_and_matches[key]['name']}, Acquired wikipedia_link: {wikipedia_url}\n")
 		except Exception as e:
+			remove_entries.append(key)
 			print(f"Error in add_wikipedia_links. reason: {e}\n")
+
+	for key in remove_entries:
+		del entities_and_matches[key]
+
+	return entities_and_matches
 
 
 # Hit Example:
