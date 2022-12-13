@@ -4,8 +4,8 @@ import urllib
 import json
 
 
-ELASTIC_PASSWORD = "YqPxlMdOLUdyOBd7vAiYt0T4"
-CLOUD_ID = "WDPS2022_Group34:dXMtY2VudHJhbDEuZ2NwLmNsb3VkLmVzLmlvOjQ0MyQ4OWJhNGUzYjA4ZDQ0Y2YwYmQyZmQ1YjZiNDdiMjdlNSQxOTYzZTJiNmNmZTY0NjBlYTFlOWVmYTkzNDRmYjYyMQ=="
+ELASTIC_PASSWORD = "Y2bIljYOMsXUi17a52UUECAT"
+CLOUD_ID = "WDPS_Group34_2022:ZXVyb3BlLXdlc3Q0LmdjcC5lbGFzdGljLWNsb3VkLmNvbTo0NDMkYzg0MGMzZmNlMDM2NDZjMjliNzI2ZWM3NDA4NjdhZGMkYTQyNjc3NjNmYWIyNDdiYmJkMGMxNzkwOGNmZjgxMGM="
 client = Elasticsearch(cloud_id = CLOUD_ID, basic_auth = ("elastic", ELASTIC_PASSWORD))
 print(client.info())
 

@@ -17,11 +17,11 @@ from rank_candidates import get_top_candidates
 import time
 
 KEYNAME = "WARC-TREC-ID"
+URLNAME = "WARC-Target-URI"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
 def find_entities(payload,i):
     t00 = time.time()
-    print(f"\n\nFinding entities for doc {i}/1466")
     if payload == '':
         return
 
@@ -31,16 +31,22 @@ def find_entities(payload,i):
     # variable 'key'
 
     key = None
+    web_url = None
     for line in payload.splitlines():
         if line.startswith(KEYNAME):
             key = line.split(': ')[1]
+        if line.startswith(URLNAME):
+            web_url = line.split(': ')[1]
             break
+
+    print(f"\n\nFinding entities for doc {i}/1466\nweb url: {web_url}")
 
     # Problem 1: The webpage is typically encoded in HTML format.
     # We should get rid of the HTML tags and retrieve the text. How can we do it?
     
+
     text = warc_html_killer(payload)
-    #print(f"document # {i}: \n {text}\n\n\n")
+    print(f"document # {i}: \n {text}\n\n\n")
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
