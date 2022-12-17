@@ -23,6 +23,7 @@ from relation_extraction import find_relations
 import time
 
 KEYNAME = "WARC-TREC-ID"
+URLNAME = "WARC-Target-URI"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
 def find_entities(key, text,i):
