@@ -7,22 +7,28 @@
 
 import sys
 import gzip
-sys.path.append("/app/assignment/assignment-code/src")
+import multiprocessing
+import tqdm
+
+
+
+sys.path.append("src")
 
 from html_to_text_prod import warc_html_killer
 from spacy_prod import spacy_extract_entities
-from wikimapper import WikiMapper
+#from wikimapper import WikiMapper
 from link_entities import get_all_candidates, add_wikipedia_links
 from rank_candidates import get_top_candidates
+from relation_extraction import find_relations
 import time
 
 KEYNAME = "WARC-TREC-ID"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
-def find_entities(payload,i):
+def find_entities(key, text,i):
     t00 = time.time()
     print(f"\n\nFinding entities for doc {i}/1466")
-    if payload == '':
+    if text == '':
         return
 
     # The variable payload contains the source code of a webpage and some
@@ -30,17 +36,8 @@ def find_entities(payload,i):
     # indicated in a line that starts with KEYNAME.  The ID is contained in the
     # variable 'key'
 
-    key = None
-    for line in payload.splitlines():
-        if line.startswith(KEYNAME):
-            key = line.split(': ')[1]
-            break
-
-    # Problem 1: The webpage is typically encoded in HTML format.
-    # We should get rid of the HTML tags and retrieve the text. How can we do it?
     
-    text = warc_html_killer(payload)
-    #print(f"document # {i}: \n {text}\n\n\n")
+
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
@@ -98,30 +95,6 @@ def find_entities(payload,i):
 
 
 
-# The goal of this function is to find relations between the entities
-def find_relations(payload, entities):
-    if payload == '':
-        return
-
-    key = None
-    for line in payload.splitlines():
-        if line.startswith(KEYNAME):
-            key = line.split(': ')[1]
-            break
-
-    # A simple solution would be to extract the text between two previously
-    # extracted entitites, and then determine if it is a valid relation
-
-    # Optionally, we can try to determine whether the relation mentioned in the
-    # text refers to a known relation in Wikidata.
-
-    # Similarly as before, now we are cheating by reading a set of relations
-    # from a file. Clearly, this will report the same set of relations for each page
-    tokens = [line.split('\t') for line in open('data/sample-relations-cheat.txt').read().splitlines()]
-    for label, subject_wikipedia_id, object_wikipedia_id, wikidata_rel_id in tokens:
-        if key:
-            yield key, subject_wikipedia_id, object_wikipedia_id, label, wikidata_rel_id
-
 
 def split_records(stream):
     payload = ''
@@ -133,26 +106,49 @@ def split_records(stream):
             payload += line
     yield payload
 
+
+def process_record(tup):
+    i, record = tup
+
+    key = None
+    for line in record.splitlines():
+        if line.startswith(KEYNAME):
+            key = line.split(': ')[1]
+            break
+
+    text = warc_html_killer(record)
+    text = "Amsterdam is the capital and largest city in the European country of the Netherlands. Amsterdam is famous for its canals and dikes. Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague. Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\". The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
+
+    
+    entities = find_entities(key, text, i)
+    
+
+    relations = find_relations(text, list(entities))
+    for _, label, wikipedia_id in entities:
+        print("ENTITY: " + '\t' + label + '\t' + wikipedia_id)
+    
+    for key, s, o, label, wikidata_id in relations:
+        print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+
 if __name__ == '__main__':
     try:
         _, INPUT = sys.argv
     except Exception as e:
         print('Usage: python3 starter-code.py INPUT')
         sys.exit(0)
+    multi = False
 
-    with gzip.open(INPUT, 'rt', errors='ignore') as fo:
-        i = 0 #For debugging / tracking what document # we're at in the warc file
-        for record in split_records(fo):
-            #DEBUGGING
-            # if i == 40:
-            #     break
-            #print(f"i: {i}\n")
-            i+=1
-            entities = find_entities(record,i)
+    with gzip.open(INPUT, 'rt', errors='ignore') as fo:   
+        if multi:
+            pool = multiprocessing.Pool() 
+            tqdm.tqdm(pool.imap(process_record, enumerate(split_records(fo))))
+        else: 
+            for i, record in enumerate(split_records(fo)):
+                #DEBUGGING
+                if i == 1:
+                    break
+                print(f"i: {i}\n")
+                process_record((i,record))
+        
             
-            for key, label, wikipedia_id in entities:
-                print("ENTITY: " + key + '\t' + label + '\t' + wikipedia_id)
-            relations = find_relations(record, entities)
-            for key, s, o, label, wikidata_id in relations:
-                print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
 

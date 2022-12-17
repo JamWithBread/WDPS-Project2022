@@ -1,5 +1,5 @@
 from elasticsearch import Elasticsearch
-from wikimapper import WikiMapper
+#from wikimapper import WikiMapper
 import urllib
 import json
 
@@ -56,6 +56,7 @@ def get_wikipedia_link(wikidata_id):
 			data = json.load(url)
 			#print(f"json data: {data}\n")
 			title = data["entities"][_id]["sitelinks"]["enwiki"]["title"]
+			title = title.replace(" ", "_")
 			wiki_url = "https://en.wikipedia.org/wiki/{}".format(title)
 
 		except Exception as e:
