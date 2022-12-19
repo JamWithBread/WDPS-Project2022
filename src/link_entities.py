@@ -1,5 +1,4 @@
 from elasticsearch import Elasticsearch
-#from wikimapper import WikiMapper
 import urllib
 import json
 

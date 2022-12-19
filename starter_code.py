@@ -8,7 +8,6 @@
 import sys
 import gzip
 import multiprocessing
-import tqdm
 
 
 
@@ -118,7 +117,11 @@ def process_record(tup):
             break
 
     text = warc_html_killer(record)
-    text = "Amsterdam is the capital and largest city in the European country of the Netherlands. Amsterdam is famous for its canals and dikes. Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague. Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\". The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
+    # text = "Amsterdam is the capital and largest city in the European country of the Netherlands. \
+    #     Amsterdam is famous for its canals and dikes.\
+    #      Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague.\
+    #          Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\".\
+    #              The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
 
     
     entities = find_entities(key, text, i)
@@ -138,15 +141,15 @@ if __name__ == '__main__':
         print('Usage: python3 starter-code.py INPUT')
         sys.exit(0)
     multi = False
-
+    open("test.txt", "w")
     with gzip.open(INPUT, 'rt', errors='ignore') as fo:   
         if multi:
             pool = multiprocessing.Pool() 
-            tqdm.tqdm(pool.imap(process_record, enumerate(split_records(fo))))
+            pool.imap(process_record, enumerate(split_records(fo)))
         else: 
             for i, record in enumerate(split_records(fo)):
                 #DEBUGGING
-                if i == 1:
+                if i == 100:
                     break
                 print(f"i: {i}\n")
                 process_record((i,record))
