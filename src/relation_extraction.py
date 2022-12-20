@@ -5,6 +5,12 @@ import textacy
 import numpy as np
 nltk.download('punkt', quiet = True)
 
+# From a list of matches retrieve the longest matches.
+def string_set(string_list):
+    return set(i for i in string_list 
+               if not any(i in s for s in string_list if i != s))
+
+
 # The goal of this function is to find relations between the entities
 def find_relations(payload, entities, key):
     relations = []
@@ -18,21 +24,31 @@ def find_relations(payload, entities, key):
     nlp = spacy.load('en_core_web_sm')
     sentences = nltk.sent_tokenize(payload)
 
-    #define the pattern 
-    # X is/are (the) NOUN
-    pattern_1 = [{'POS': 'PROPN'},
-        {'POS': 'AUX'},
-        {'POS': 'DET', 'OP': '*'},
-        {'POS': 'NOUN'}]
+    # V | VP | VW*P
+    # V = verb particle? adv?
+    # W = (noun | adj | adv | pron | det)
+    # P = (prep(adp) | particle | inf. marker)
+    patterns = [[{'POS': 'VERB'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}], 
+                [{'POS': 'VERB'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}, {'POS': 'ADP'}],
+                [{'POS': 'VERB'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}, {'POS': 'PART'}],
+                [{'POS': 'AUX'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}],
+                [{'POS': 'AUX'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}, {'POS': 'ADP'}],
+                [{'POS': 'AUX'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}, {'POS': 'PART'}]]
 
-    # in/of/to Y
-    pattern_2 = [{'POS': 'ADP'},
-           {'POS': 'DET', 'OP': '*'},
-           {'POS': 'PROPN'}]
-        
-    # located in/ 
-    pattern_3 = [{'POS': 'VERB'},
-        {'POS': 'ADP'}]
+    v1 = [{'POS': 'VERB'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}]
+    v2 = [{'POS': 'AUX'}, {'POS': 'PART', 'OP': '?'}, {'POS': 'ADV', 'OP': '?'}]
+    w = [{'POS': 'NOUN', 'OP': '*'}, {'POS': 'ADJ', 'OP': '*'}, {'POS': 'ADV', 'OP': '*'}, {'POS': 'PRON', 'OP': '*'}, {'POS': 'DET', 'OP': '*'}]
+    
+    # Create an approximation of W* by repeating the options.
+    for i in range(20):
+        v1 = v1 + w
+        v2 = v2 + w
+
+    # Add VW*P patterns.
+    patterns.append(v1 + [{'POS': 'ADP'}])
+    patterns.append(v2 + [{'POS': 'ADP'}])
+    patterns.append(v1 + [{'POS': 'PART'}])
+    patterns.append(v2 + [{'POS': 'PART'}])
 
     # Look for relations in each sentence.
     for sentence in sentences:
@@ -43,41 +59,41 @@ def find_relations(payload, entities, key):
             relation = []
             doc = nlp(sentence)
 
-            # match of type AUX NOUN ADP
-            matches_1 = textacy.extract.matches.token_matches(doc, pattern_1)  
-            matches_2 = textacy.extract.matches.token_matches(doc, pattern_2)
-
-            for match in matches_1:
-                for ent in k:
-                    if ent in match.text:
-                        relation.append(match.text.replace(ent, ''))
-                        relation.append(ent)
-                        break
-            
-            for match in matches_2:
-                for ent in k:
-                    if ent in match.text:
-                        relation.append(ent)
-                        break
-
-            if len(relation) == 3:
-                relations.append(relation)
-
             # match of type AUX VERB ADP
-            matches_3 = textacy.extract.matches.token_matches(doc, pattern_3)
+            matches = textacy.extract.matches.token_matches(doc, patterns)
             ent_indices = np.array([sentence.find(w) for w in k])
+            
 
-            for match in matches_3:
-                match_loc = sentence.find(match.text)
+            match_strings = []
+            starts = []
+            ends = []
+            for i in matches:
+                starts.append(i.start)
+                ends.append(i.end)
+                match_strings.append(i.text)
+
+            # If matches are next to eachother combine them.
+            for i, end in enumerate(ends):
+                if end in starts:
+                    indices = [i for i, x in enumerate(starts) if x == end]
+                    for j in indices:
+                        match_strings.append(match_strings[i] + " " + match_strings[j])
+
+            # Get the longest different matches.
+            longest_matches = string_set(list(match_strings))
+
+            # For each match find the closest entities.
+            for match in longest_matches:
+                match_loc = sentence.find(match)
                 relation = []
-                relation.append(match.text)
+                relation.append(match)
                 
                 # Closest entity before match.
                 val = max(ent_indices[ent_indices < match_loc], default=-1)
 
-                # If there are no entities before match
+                # If there are no entities before match.
                 if val == -1:
-                    # Get two closest entities after match
+                    # Get two closest entities after match.
                     val = min(ent_indices[ent_indices > match_loc], default=-1)
                     if val == -1:
                         break
@@ -89,7 +105,7 @@ def find_relations(payload, entities, key):
                     relation.append(k[j[0]])
                     relation.append(k[i[0]])
                 else:
-                    # Closest entity before and after match
+                    # Closest entity before and after match.
                     i, = np.where(ent_indices == val)
                     relation.append(k[i[0]])
                     val = min(ent_indices[ent_indices > match_loc], default=-1)
@@ -98,17 +114,9 @@ def find_relations(payload, entities, key):
                     i, = np.where(ent_indices == val)
                     relation.append(k[i[0]])
 
-            
+                # If there is a complete relation save it.
                 if len(relation) == 3:
                     relations.append(relation)
 
-    
-    # Optionally, we can try to determine whether the relation mentioned in the
-    # text refers to a known relation in Wikidata.
-
-    # Similarly as before, now we are cheating by reading a set of relations
-    # from a file. Clearly, this will report the same set of relations for each page
-    tokens = relations
-
-    for label, subject_wikipedia_id, object_wikipedia_id in tokens:
+    for label, subject_wikipedia_id, object_wikipedia_id in relations:
         yield key, subject_wikipedia_id, object_wikipedia_id, label

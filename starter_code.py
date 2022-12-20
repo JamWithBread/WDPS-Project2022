@@ -21,7 +21,7 @@ KEYNAME = "WARC-TREC-ID"
 URLNAME = "WARC-Target-URI"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
-def find_entities(key, text, i):
+def find_entities(key, text, verbose):
     t00 = time.time()
     if text == '':
         return
@@ -47,23 +47,9 @@ def find_entities(key, text, i):
 
     #problem 3.3: Get wikipedia link for selected candidate
     matched_entities = add_wikipedia_links(matched_entities,verbose)
-    verboseprint(f"Find entities finished - Total time: {round(time.time()-t00,2)}s\n")
+    if verbose:
+        print(f"Find entities finished - Total time: {round(time.time()-t00,2)}s\n")
 
-    # A simple implementation would be to create a dictionary with all the
-    # labels of the entities in Wikipedia. You may want to contact also some
-    # external KBs (like Wikidata) to get some extra knowledge, or find a way
-    # to leverage the context in the webpage. For instance, if you know that the
-    # webpage refers to persons then you can query the knowledge base to filter
-    # out all the entities that are not persons...
-
-    # Obviously, more sophisticated implementations that the one suggested
-    # above are more than welcome :-)
-
-    # For now, we are cheating. We are going to return the labels that we stored
-    # in sample-labels-cheat.txt Instead of doing that, you should process the
-    # text to identify the entities. Your implementation should return the
-    # discovered disambiguated entities with the same format so that I can
-    # check the performance of your program.
 
     if not matched_entities: #If document contained no text
         return
@@ -75,42 +61,11 @@ def find_entities(key, text, i):
         yield key, label, wikipedia_id
 
 
-    # cheats = dict((line.split('\t', 2) for line in open('data/sample-entities-cheat.txt').read().splitlines()))
-    # for label, wikipedia_id in cheats.items():
-    #     if key and (label in payload):
-    #         print(f"ley: {key}, label: {label}, wikipedia_id: {wikipedia_id}\n")
-    #         yield key, label, wikipedia_id
 
-
-
-# # The goal of this function is to find relations between the entities
-# def find_relations(payload, entities):
-#     if payload == '':
-#         return
-
-#     key = None
-#     for line in payload.splitlines():
-#         if line.startswith(KEYNAME):
-#             key = line.split(': ')[1]
-#             break
-
-#     # A simple solution would be to extract the text between two previously
-#     # extracted entitites, and then determine if it is a valid relation
-
-#     # Optionally, we can try to determine whether the relation mentioned in the
-#     # text refers to a known relation in Wikidata.
-
-#     # Similarly as before, now we are cheating by reading a set of relations
-#     # from a file. Clearly, this will report the same set of relations for each page
-#     tokens = [line.split('\t') for line in open('data/sample-relations-cheat.txt').read().splitlines()]
-#     for label, subject_wikipedia_id, object_wikipedia_id, wikidata_rel_id in tokens:
-#         if key:
-#             yield key, subject_wikipedia_id, object_wikipedia_id, label, wikidata_rel_id
-
-def process_record(tup):
-    i, record = tup
+def process_record(i, record, verbose):
 
     key = None
+    key = "clueweb12-0000tw-00-00007"
     web_url = None
     for line in record.splitlines():
         if line.startswith(KEYNAME):
@@ -118,20 +73,21 @@ def process_record(tup):
         if line.startswith(URLNAME):
             web_url = line.split(': ')[1]
             break
-
-    verboseprint(f"\n\nFinding entities for doc #{i}. web url: {web_url}")
+    
+    if verbose:
+        print(f"\n\nFinding entities for doc #{i}. web url: {web_url}")
 
     text = warc_html_killer(record)
 
-    verboseprint(f"document # {i}: \n {text}\n\n\n")
+    if verbose:
+        print(f"document # {i}: \n {text}\n\n\n")
     # text = "Amsterdam is the capital and largest city in the European country of the Netherlands. \
     #     Amsterdam is famous for its canals and dikes.\
     #      Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague.\
     #          Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\".\
     #              The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
-
     
-    entities = find_entities(key, text, i)
+    entities = find_entities(key, text, verbose)
     
     ent_list = []
     for key, label, wikipedia_id in entities:
@@ -155,31 +111,6 @@ def split_records(stream):
     yield payload
 
 
-def process_record(tup):
-    i, record = tup
-
-    key = None
-    for line in record.splitlines():
-        if line.startswith(KEYNAME):
-            key = line.split(': ')[1]
-            break
-    
-
-    text = warc_html_killer(record)
-
-    entities = find_entities(key, text, i)
-    
-    ent_list = []
-    for key, label, wikipedia_id in entities:
-        ent_list.append(label)
-        print(key + '\t' + "ENTITY" + '\t' + label + '\t' + wikipedia_id)
-
-    relations = find_relations(text, ent_list, key)
-    
-    for key, subject_wikipedia_id, object_wikipedia_id, label in relations:
-        print(key + '\t' + "RELATION" + '\t' + label + '\t' + subject_wikipedia_id + '\t' + object_wikipedia_id )
-
-
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(prog = "python3 starter_code.py")
@@ -188,35 +119,29 @@ if __name__ == '__main__':
         args = parser.parse_args()
         INPUT = args.data
         verbose = args.verbose
-        if verbose:
-            def verboseprint(*args):
-                for arg in args:
-                    print(arg)
-        else:   
-            verboseprint = lambda *a: None 
-
 
     except Exception as e:
         print(f'Usage: python3 starter-code.py INPUT. error: {e}')
         sys.exit(0)
 
     #Create Connection to Elasticsearch cloud service
-    verboseprint(f"\nElasticsearch client info:\n",get_client_info())
+    if verbose:
+        print(f"\nElasticsearch client info:\n",get_client_info())
 
     multi = True
     with gzip.open(INPUT, 'rt', errors='ignore') as fo: 
         records_enum = []
-        for i, j in enumerate(split_records(fo)):
-            records_enum.append((i,j))
+        for i, record in enumerate(split_records(fo)):
+            records_enum.append([i, record, verbose])
        
         if multi:
             pool = multiprocessing.Pool() 
-            pool.map(process_record, records_enum[:100])
+            pool.starmap(process_record, records_enum[:100])
         else: 
             for i, record in enumerate(split_records(fo)):
                 #DEBUGGING
                 if i == 3:
                     break
                 print(f"i: {i}\n")
-                process_record((i,record))
+                process_record(i,record, verbose)
 
