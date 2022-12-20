@@ -1,4 +1,3 @@
-from spacy.matcher import Matcher 
 import spacy
 import itertools
 import nltk
@@ -7,17 +6,12 @@ import numpy as np
 nltk.download('punkt', quiet = True)
 
 # The goal of this function is to find relations between the entities
-def find_relations(payload, entities):
+def find_relations(payload, entities, key):
     relations = []
     if payload == '':
         return
     
     properties = open('src/properties.json')
-    key = None
-
-    entity_list = []
-    for _, entity, _ in entities:
-        entity_list.append(entity)
     
     # A simple solution would be to extract the text between two previously
     # extracted entitites, and then determine if it is a valid relation
@@ -40,8 +34,11 @@ def find_relations(payload, entities):
     pattern_3 = [{'POS': 'VERB'},
         {'POS': 'ADP'}]
 
+    # Look for relations in each sentence.
     for sentence in sentences:
-        k = [w for w in entity_list if w in sentence]
+        k = [w for w in entities if w in sentence]
+
+        # There must be two or more entities in the sentence.
         if len(k) >= 2:
             relation = []
             doc = nlp(sentence)
@@ -64,13 +61,11 @@ def find_relations(payload, entities):
                         break
 
             if len(relation) == 3:
-                with open("test.txt", "a") as myfile:
-                    myfile.write(str(relation) + "\n")
-            
+                relations.append(relation)
+
             # match of type AUX VERB ADP
             matches_3 = textacy.extract.matches.token_matches(doc, pattern_3)
             ent_indices = np.array([sentence.find(w) for w in k])
-
 
             for match in matches_3:
                 match_loc = sentence.find(match.text)
@@ -94,7 +89,7 @@ def find_relations(payload, entities):
                     relation.append(k[j[0]])
                     relation.append(k[i[0]])
                 else:
-                    # Closent entity before and after match
+                    # Closest entity before and after match
                     i, = np.where(ent_indices == val)
                     relation.append(k[i[0]])
                     val = min(ent_indices[ent_indices > match_loc], default=-1)
@@ -105,23 +100,15 @@ def find_relations(payload, entities):
 
             
                 if len(relation) == 3:
-                    with open("test.txt", "a") as myfile:
-                        myfile.write(str(relation) + "\n")
-            
+                    relations.append(relation)
 
     
-   
-        
-    
-    
-
-
     # Optionally, we can try to determine whether the relation mentioned in the
     # text refers to a known relation in Wikidata.
 
     # Similarly as before, now we are cheating by reading a set of relations
     # from a file. Clearly, this will report the same set of relations for each page
-    tokens = [line.split('\t') for line in open('data/sample-relations-cheat.txt').read().splitlines()]
-    for label, subject_wikipedia_id, object_wikipedia_id, wikidata_rel_id in tokens:
-        if key:
-            yield key, subject_wikipedia_id, object_wikipedia_id, label, wikidata_rel_id
+    tokens = relations
+
+    for label, subject_wikipedia_id, object_wikipedia_id in tokens:
+        yield key, subject_wikipedia_id, object_wikipedia_id, label

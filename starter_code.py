@@ -21,7 +21,7 @@ KEYNAME = "WARC-TREC-ID"
 URLNAME = "WARC-Target-URI"
 
 # The goal of this function process the webpage and returns a list of labels -> entity ID
-def find_entities(key,text,i):
+def find_entities(key, text, i):
     t00 = time.time()
     if text == '':
         return
@@ -166,24 +166,22 @@ def process_record(tup):
         if line.startswith(KEYNAME):
             key = line.split(': ')[1]
             break
+    
 
     text = warc_html_killer(record)
-    # text = "Amsterdam is the capital and largest city in the European country of the Netherlands. \
-    #     Amsterdam is famous for its canals and dikes.\
-    #      Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague.\
-    #          Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\".\
-    #              The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
 
-    
     entities = find_entities(key, text, i)
     
+    ent_list = []
+    for key, label, wikipedia_id in entities:
+        ent_list.append(label)
+        print(key + '\t' + "ENTITY" + '\t' + label + '\t' + wikipedia_id)
 
-    relations = find_relations(text, list(entities))
-    for _, label, wikipedia_id in entities:
-        print("ENTITY: " + '\t' + label + '\t' + wikipedia_id)
+    relations = find_relations(text, ent_list, key)
     
-    for key, s, o, label, wikidata_id in relations:
-        print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+    for key, subject_wikipedia_id, object_wikipedia_id, label in relations:
+        print(key + '\t' + "RELATION" + '\t' + label + '\t' + subject_wikipedia_id + '\t' + object_wikipedia_id )
+
 
 if __name__ == '__main__':
     try:
@@ -213,11 +211,11 @@ if __name__ == '__main__':
     with gzip.open(INPUT, 'rt', errors='ignore') as fo:   
         if multi:
             pool = multiprocessing.Pool() 
-            pool.imap(process_record, enumerate(split_records(fo)))
+            pool.map(process_record, records_enum[:100])
         else: 
             for i, record in enumerate(split_records(fo)):
                 #DEBUGGING
-                if i == 100:
+                if i == 3:
                     break
                 print(f"i: {i}\n")
                 process_record((i,record))
