@@ -3,13 +3,11 @@
 #   python3 -m pip install nltk
 
 
-
-
 import re, math
 import nltk
-nltk.download('wordnet')
-nltk.download('stopwords')
-nltk.download('omw-1.4')
+nltk.download('wordnet',quiet=True)
+nltk.download('stopwords',quiet=True)
+nltk.download('omw-1.4',quiet=True)
 from collections import Counter
 from nltk.corpus import stopwords
 from nltk.stem.porter import *
@@ -22,7 +20,6 @@ stemmer = PorterStemmer()
 
 
 def get_cosine(vec1, vec2):
-    # print vec1, vec2
     intersection = set(vec1.keys()) & set(vec2.keys())
     numerator = sum([vec1[x] * vec2[x] for x in intersection])
 
@@ -56,7 +53,7 @@ def get_similarity(a, b):
 
 def get_top_candidates(cand_dict):
     # This function should be passed candidates_and_entities dict from starter_code.py
-    # Returns entity and most likely cadidate match
+    # Returns entity and most likely cadidate match (highest scoring match)
     entities_and_match = {}
     for key in cand_dict:
         top_score = {'candidate': {}, 'score': 0}
@@ -64,6 +61,7 @@ def get_top_candidates(cand_dict):
         for match in cand_dict[key]["candidates"]:
             candidate = match["name"]
             sim_score = get_similarity(entity,candidate)
+            #print(f"Similarity score: {sim_score}, entity: {entity}, cand: {candidate}\n")
             if sim_score > top_score['score']:
                 top_score['candidate'] = match
                 top_score['score'] = sim_score
