@@ -65,6 +65,7 @@ def get_wikipedia_link(wikidata_id,verbose):
 		try:
 			data = json.load(url)
 			title = data["entities"][_id]["sitelinks"]["enwiki"]["title"]
+			title = title.replace(" ", "_")
 			wiki_url = "https://en.wikipedia.org/wiki/{}".format(title)
 
 		except Exception as e:

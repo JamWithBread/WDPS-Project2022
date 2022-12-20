@@ -157,6 +157,34 @@ def split_records(stream):
             payload += line
     yield payload
 
+
+def process_record(tup):
+    i, record = tup
+
+    key = None
+    for line in record.splitlines():
+        if line.startswith(KEYNAME):
+            key = line.split(': ')[1]
+            break
+
+    text = warc_html_killer(record)
+    # text = "Amsterdam is the capital and largest city in the European country of the Netherlands. \
+    #     Amsterdam is famous for its canals and dikes.\
+    #      Unlike in capitals of most other countries, the national government, parliament, government ministries, supreme court, royal family and embassies are not in Amsterdam, but in The Hague.\
+    #          Located in the Dutch province of North Holland, Amsterdam is colloquially referred to as the \"Venice of the North\".\
+    #              The only diplomatic offices present in Amsterdam are consulates. The city hosts two universities (the University of Amsterdam and the Free University Amsterdam) and an international airport \"Schiphol Airport"
+
+    
+    entities = find_entities(key, text, i)
+    
+
+    relations = find_relations(text, list(entities))
+    for _, label, wikipedia_id in entities:
+        print("ENTITY: " + '\t' + label + '\t' + wikipedia_id)
+    
+    for key, s, o, label, wikidata_id in relations:
+        print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+
 if __name__ == '__main__':
     try:
         parser = argparse.ArgumentParser(prog = "python3 starter_code.py")
@@ -193,5 +221,4 @@ if __name__ == '__main__':
                     break
                 print(f"i: {i}\n")
                 process_record((i,record))
-
 
