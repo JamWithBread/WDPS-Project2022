@@ -30,12 +30,6 @@ def find_entities(key, text, i):
     # additional meta-data.  We first retrieve the ID of the webpage, which is
     # indicated in a line that starts with KEYNAME.  The ID is contained in the
     # variable 'key'
-
-    # Problem 1: The webpage is typically encoded in HTML format.
-    # We should get rid of the HTML tags and retrieve the text. How can we do it?
-    
-
-    #text = warc_html_killer(payload)
     
     # Problem 2: Let's assume that we found a way to retrieve the text from a
     # webpage. How can we recognize the entities in the text?
@@ -128,6 +122,7 @@ def process_record(tup):
     verboseprint(f"\n\nFinding entities for doc #{i}. web url: {web_url}")
 
     text = warc_html_killer(record)
+
     verboseprint(f"document # {i}: \n {text}\n\n\n")
     # text = "Amsterdam is the capital and largest city in the European country of the Netherlands. \
     #     Amsterdam is famous for its canals and dikes.\
@@ -138,13 +133,15 @@ def process_record(tup):
     
     entities = find_entities(key, text, i)
     
+    ent_list = []
+    for key, label, wikipedia_id in entities:
+        ent_list.append(label)
+        print(key + '\t' + "ENTITY" + '\t' + label + '\t' + wikipedia_id)
 
-    relations = find_relations(text, list(entities))
-    for _, label, wikipedia_id in entities:
-        print("ENTITY: " + '\t' + label + '\t' + wikipedia_id)
+    relations = find_relations(text, ent_list, key)
     
-    for key, s, o, label, wikidata_id in relations:
-        print("RELATION: " + key + '\t' + s + '\t' + o + '\t' + label + '\t' + wikidata_id)
+    for key, subject_wikipedia_id, object_wikipedia_id, label in relations:
+        print(key + '\t' + "RELATION" + '\t' + label + '\t' + subject_wikipedia_id + '\t' + object_wikipedia_id )
 
 
 def split_records(stream):
@@ -206,9 +203,12 @@ if __name__ == '__main__':
     #Create Connection to Elasticsearch cloud service
     verboseprint(f"\nElasticsearch client info:\n",get_client_info())
 
-    multi = False
-    open("test.txt", "w")
-    with gzip.open(INPUT, 'rt', errors='ignore') as fo:   
+    multi = True
+    with gzip.open(INPUT, 'rt', errors='ignore') as fo: 
+        records_enum = []
+        for i, j in enumerate(split_records(fo)):
+            records_enum.append((i,j))
+       
         if multi:
             pool = multiprocessing.Pool() 
             pool.map(process_record, records_enum[:100])
