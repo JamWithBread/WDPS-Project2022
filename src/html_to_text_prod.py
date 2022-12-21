@@ -1,13 +1,9 @@
 from bs4 import BeautifulSoup
 import re
 
-# before using in container:
-#	python3 -m pip install bs4
-
 KEYHTML= "<!DOCTYPE html"
 
 def warc_html_killer(content):
-	# Code Adapted from stackoverflow user: PeYoTIL
 	# -> to be applied to a html content from single warc file entry 
 	text = ""
 	read = False

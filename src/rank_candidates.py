@@ -1,8 +1,3 @@
-
-# Before running in container:
-#   python3 -m pip install nltk
-
-
 import re, math
 import nltk
 nltk.download('wordnet',quiet=True)
@@ -65,6 +60,9 @@ def get_top_candidates(cand_dict):
             if sim_score > top_score['score']:
                 top_score['candidate'] = match
                 top_score['score'] = sim_score
+
+        if top_score['score'] < 0.3: #if similarity score below 0.3 threshold, entity is considered unlinkable
+            continue
 
         top_cand = top_score['candidate']
 

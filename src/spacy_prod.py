@@ -1,9 +1,3 @@
-#Sspacy.py
-
-#before using in container:
-#	python3 -m pip install spacy
-#	python3 -m spacy download en_core_web_sm
-
 import spacy
 
 #returns a dict of entities, where they appear in the text and their type

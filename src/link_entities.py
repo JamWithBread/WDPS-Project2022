@@ -24,7 +24,7 @@ def get_entity_candidates(entity,verbose):
 			size=10, 
 			index="wikidata_1", 
 			request_cache=True, 
-			body={"query": {"query_string": {"query": entity['name'],}}})
+			body={"query":{ "match": {"column2": entity['name'] }}})
 
 		candidates = []
 
