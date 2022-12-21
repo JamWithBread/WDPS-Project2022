@@ -89,12 +89,12 @@ def process_record(i, record, verbose):
     
     entities = find_entities(key, text, verbose)
     
-    ent_list = []
+    ent_dict = dict()
     for key, label, wikipedia_id in entities:
-        ent_list.append(label)
+        ent_dict[label] = wikipedia_id
         print(key + '\t' + "ENTITY" + '\t' + label + '\t' + wikipedia_id)
 
-    relations = find_relations(text, ent_list, key)
+    relations = find_relations(text, ent_dict, key)
     
     for key, subject_wikipedia_id, object_wikipedia_id, label in relations:
         print(key + '\t' + "RELATION" + '\t' + label + '\t' + subject_wikipedia_id + '\t' + object_wikipedia_id )

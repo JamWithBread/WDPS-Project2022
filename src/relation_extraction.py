@@ -12,13 +12,13 @@ def string_set(string_list):
 
 
 # The goal of this function is to find relations between the entities
-def find_relations(payload, entities, key):
+def find_relations(payload, ent_dict, key):
     relations = []
     if payload == '':
         return
     
     properties = open('src/properties.json')
-    
+    entities = ent_dict.keys()
     # A simple solution would be to extract the text between two previously
     # extracted entitites, and then determine if it is a valid relation
     nlp = spacy.load('en_core_web_sm')
@@ -93,17 +93,7 @@ def find_relations(payload, entities, key):
 
                 # If there are no entities before match.
                 if val == -1:
-                    # Get two closest entities after match.
-                    val = min(ent_indices[ent_indices > match_loc], default=-1)
-                    if val == -1:
-                        break
-                    i, = np.where(ent_indices == val)
-                    val = min(ent_indices[ent_indices > val], default=-1)
-                    if val == -1:
-                        break
-                    j, = np.where(ent_indices == val)
-                    relation.append(k[j[0]])
-                    relation.append(k[i[0]])
+                    continue
                 else:
                     # Closest entity before and after match.
                     i, = np.where(ent_indices == val)
@@ -119,4 +109,4 @@ def find_relations(payload, entities, key):
                     relations.append(relation)
 
     for label, subject_wikipedia_id, object_wikipedia_id in relations:
-        yield key, subject_wikipedia_id, object_wikipedia_id, label
+        yield key, ent_dict[subject_wikipedia_id], ent_dict[object_wikipedia_id], label
