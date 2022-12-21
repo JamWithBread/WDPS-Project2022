@@ -150,7 +150,7 @@ if __name__ == '__main__':
        
         if multi:
             pool = multiprocessing.Pool() 
-            pool.starmap(process_record, records_enum[:100])
+            pool.starmap(process_record, records_enum)
             
         else: 
             for i, record, verbose in records_enum:
